@@ -40,6 +40,13 @@ object Protocol {
 object Storage {
     fun expertCopy(ctx: Context) = File(ctx.filesDir, "expert_${System.currentTimeMillis()}.pdf")
     fun clientDir(ctx: Context) = File(ctx.filesDir, "received")
+
+    /** Nettoie ce qu'une séance interrompue (appli tuée, batterie…) aurait laissé. */
+    fun wipeAll(ctx: Context) {
+        ctx.filesDir.listFiles()?.filter { it.name.startsWith("expert_") }?.forEach { it.delete() }
+        clientDir(ctx).deleteRecursively()
+        ctx.cacheDir.deleteRecursively()
+    }
 }
 
 /** Wi-Fi en faible latence tant que l'écran est allumé. */

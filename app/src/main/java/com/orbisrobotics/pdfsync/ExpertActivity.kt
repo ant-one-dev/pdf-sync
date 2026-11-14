@@ -45,6 +45,7 @@ class ExpertActivity : Activity(), SyncServer.Listener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE) // pas de capture d'écran
         buildUi()
 
         pages = PageController(this, pageView)

@@ -33,6 +33,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Storage.wipeAll(this) // rien ne doit rester d'une séance précédente
 
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL

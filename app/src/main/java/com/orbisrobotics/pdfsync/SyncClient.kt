@@ -83,6 +83,11 @@ class SyncClient(
         try { socket?.close() } catch (_: IOException) {}
     }
 
+    /** Après un effacement local : l'Expert renverra le document à la reconnexion. */
+    fun forgetPdf() {
+        cachedPdf = 0L
+    }
+
     // false = refusé, on arrête
     private fun waitAccepted(input: DataInputStream): Boolean {
         while (true) {

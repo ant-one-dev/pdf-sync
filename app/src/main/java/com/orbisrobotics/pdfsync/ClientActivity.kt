@@ -45,9 +45,19 @@ class ClientActivity : Activity(), SyncClient.Listener {
     private val handler = Handler(Looper.getMainLooper())
     private val prefs by lazy { getSharedPreferences("client", MODE_PRIVATE) }
 
+    // plus de nouvelles de l'Expert depuis 2 min : on efface par précaution
+    private val lostTimeout = Runnable {
+        if (currentFile != null) {
+            client?.forgetPdf()
+            clearDocument("Liaison avec l'Expert perdue depuis 2 minutes.\n" +
+                "Le document a été effacé, il sera renvoyé au retour de la connexion.")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
 
         buildUi()
         pages = PageController(this, pageView)
@@ -182,6 +192,7 @@ class ClientActivity : Activity(), SyncClient.Listener {
     }
 
     override fun onStatus(text: String, connected: Boolean) = runOnUiThread {
+        val wasLinked = linked
         linkStatus = text
         linked = connected
         refreshStatus()
@@ -189,6 +200,8 @@ class ClientActivity : Activity(), SyncClient.Listener {
             messageText.visibility = View.VISIBLE
             messageText.text = "Connecté.\nEn attente du document…"
         }
+        if (connected) handler.removeCallbacks(lostTimeout)
+        else if (wasLinked) handler.postDelayed(lostTimeout, 120_000)
     }
 
     override fun onWaitingApproval() = runOnUiThread {
@@ -227,6 +240,7 @@ class ClientActivity : Activity(), SyncClient.Listener {
 
 
     override fun onRejected() = runOnUiThread {
+        handler.removeCallbacks(lostTimeout)
         linked = false
         linkStatus = "Refusé par le présentateur"
         refreshStatus()
@@ -235,6 +249,7 @@ class ClientActivity : Activity(), SyncClient.Listener {
     }
 
     override fun onSessionEnded() = runOnUiThread {
+        handler.removeCallbacks(lostTimeout)
         linked = false
         linkStatus = "Présentation terminée"
         refreshStatus()
