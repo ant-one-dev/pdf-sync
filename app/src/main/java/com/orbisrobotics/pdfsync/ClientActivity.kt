@@ -191,6 +191,16 @@ class ClientActivity : Activity(), SyncClient.Listener {
         }
     }
 
+    override fun onWaitingApproval() = runOnUiThread {
+        linkStatus = "En attente de validation"
+        linked = false
+        refreshStatus()
+        if (currentFile == null) {
+            messageText.visibility = View.VISIBLE
+            messageText.text = "Demande envoyée.\nEn attente de la validation du présentateur…"
+        }
+    }
+
     override fun onPdfProgress(received: Long, total: Long) = runOnUiThread {
         if (received >= total) {
             progress.visibility = View.GONE
@@ -215,6 +225,14 @@ class ClientActivity : Activity(), SyncClient.Listener {
 
     override fun onPage(page: Int) = runOnUiThread { pages.show(page) }
 
+
+    override fun onRejected() = runOnUiThread {
+        linked = false
+        linkStatus = "Refusé par le présentateur"
+        refreshStatus()
+        clearDocument("Accès refusé ou retiré par le présentateur.\nLe document a été effacé de cette tablette.")
+        askName("Le présentateur n'a pas accepté cette tablette. Vous pouvez refaire une demande.")
+    }
 
     override fun onSessionEnded() = runOnUiThread {
         linked = false

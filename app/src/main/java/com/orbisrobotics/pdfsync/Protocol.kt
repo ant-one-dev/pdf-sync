@@ -10,19 +10,23 @@ import java.io.File
  *
  *   Expert -> Client   HELLO
  *   Client -> Expert   long idDuPdfEnCache, UTF idTablette, UTF nom
- *   Expert -> Client   ACCEPTED
+ *   Expert -> Client   WAIT_APPROVAL, puis ACCEPTED ou REJECTED
+ *                      (une tablette déjà acceptée dans la séance passe directement)
  *
  * Ensuite Expert -> Client :
  *   PDF   long id, UTF nom, long taille, octets
  *   PAGE  int page
  *   PING                        toutes les 3 s
  *   END                         fin de séance, le Client efface le document
+ *   REJECTED                    tablette retirée par le présentateur
  */
 object Protocol {
     const val PORT = 5050
 
     const val HELLO = 10
     const val ACCEPTED = 11
+    const val WAIT_APPROVAL = 13
+    const val REJECTED = 14
     const val PDF = 1
     const val PAGE = 2
     const val PING = 3

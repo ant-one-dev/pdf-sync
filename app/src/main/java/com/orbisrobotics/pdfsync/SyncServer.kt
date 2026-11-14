@@ -9,6 +9,7 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -26,6 +27,8 @@ class SyncServer(private val listener: Listener) {
     // appelés depuis des threads réseau
     interface Listener {
         fun onClientCountChanged(count: Int)
+        fun onApprovalRequest(requestId: Int, name: String)
+        fun onApprovalCancelled(requestId: Int)
     }
 
     private class Pdf(val file: File, val name: String, val id: Long)
@@ -36,6 +39,9 @@ class SyncServer(private val listener: Listener) {
     @Volatile private var page = 0
 
     private val clients = CopyOnWriteArrayList<Client>()
+    private val waiting = CopyOnWriteArrayList<Client>()
+    // tablettes acceptées pendant la séance : réadmises sans redemander après une coupure
+    private val approved = ConcurrentHashMap.newKeySet<String>()
     private val ids = AtomicInteger()
     private var pinger: ScheduledExecutorService? = null
 
@@ -45,6 +51,7 @@ class SyncServer(private val listener: Listener) {
         pinger = Executors.newSingleThreadScheduledExecutor().also {
             it.scheduleWithFixedDelay({
                 for (c in clients) c.send { o -> o.writeByte(Protocol.PING) }
+                for (c in waiting) c.send { o -> o.writeByte(Protocol.PING) }
             }, Protocol.PING_MS, Protocol.PING_MS, TimeUnit.MILLISECONDS)
         }
     }
@@ -84,7 +91,26 @@ class SyncServer(private val listener: Listener) {
         pinger?.shutdownNow()
         try { serverSocket?.close() } catch (_: IOException) {}
         clients.forEach { it.end() }
+        waiting.forEach { it.close() }
         clients.clear()
+        waiting.clear()
+    }
+
+    fun approve(requestId: Int) {
+        val c = waiting.firstOrNull { it.id == requestId } ?: return
+        approved.add(c.deviceId)
+        c.admit()
+    }
+
+    fun reject(requestId: Int) {
+        waiting.firstOrNull { it.id == requestId }?.reject()
+    }
+
+    /** Retire une tablette : elle efface le document et devra être réacceptée. */
+    fun kick(clientId: Int) {
+        val c = clients.firstOrNull { it.id == clientId } ?: return
+        approved.remove(c.deviceId)
+        c.reject()
     }
 
     fun connectedClients(): List<Pair<Int, String>> = clients.map { it.id to it.name }
@@ -143,7 +169,14 @@ class SyncServer(private val listener: Listener) {
                 name = input.readUTF().trim().take(40).ifEmpty { "Tablette" }
                 socket.soTimeout = 0
 
-                admit()
+                if (deviceId.isNotEmpty() && deviceId in approved) {
+                    admit()
+                } else {
+                    // le présentateur doit accepter la tablette
+                    waiting.add(this)
+                    send { o -> o.writeByte(Protocol.WAIT_APPROVAL) }
+                    listener.onApprovalRequest(id, name)
+                }
                 // on lit jusqu'à la fermeture pour détecter tout de suite un départ
                 while (input.read() >= 0) {
                 }
@@ -155,6 +188,7 @@ class SyncServer(private val listener: Listener) {
 
         fun admit() {
             if (closed) return
+            waiting.remove(this)
             clients.add(this)
             listener.onClientCountChanged(clients.size)
             send { o ->
@@ -164,6 +198,11 @@ class SyncServer(private val listener: Listener) {
                     writePage(o, page)
                 }
             }
+        }
+
+        fun reject() {
+            send { o -> o.writeByte(Protocol.REJECTED) }
+            closeLater()
         }
 
         fun end() {
@@ -202,6 +241,7 @@ class SyncServer(private val listener: Listener) {
             closed = true
             try { socket.close() } catch (_: IOException) {}
             sender.shutdownNow()
+            if (waiting.remove(this)) listener.onApprovalCancelled(id)
             if (clients.remove(this)) listener.onClientCountChanged(clients.size)
         }
     }

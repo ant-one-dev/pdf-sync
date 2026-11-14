@@ -22,9 +22,11 @@ class SyncClient(
 ) {
     interface Listener {
         fun onStatus(text: String, connected: Boolean)
+        fun onWaitingApproval()
         fun onPdfProgress(received: Long, total: Long)
         fun onPdfReceived(file: File, name: String)
         fun onPage(page: Int)
+        fun onRejected()
         fun onSessionEnded()
     }
 
@@ -87,6 +89,11 @@ class SyncClient(
             when (input.readByte().toInt()) {
                 Protocol.ACCEPTED -> return true
                 Protocol.PING -> Unit
+                Protocol.WAIT_APPROVAL -> listener.onWaitingApproval()
+                Protocol.REJECTED -> {
+                    rejected()
+                    return false
+                }
                 else -> throw IOException("réponse inattendue")
             }
         }
@@ -98,6 +105,10 @@ class SyncClient(
                 Protocol.PDF -> receivePdf(input)
                 Protocol.PAGE -> listener.onPage(input.readInt())
                 Protocol.PING -> Unit
+                Protocol.REJECTED -> {
+                    rejected()
+                    return
+                }
                 Protocol.END -> {
                     running = false
                     cachedPdf = 0L
@@ -107,6 +118,12 @@ class SyncClient(
                 else -> throw IOException("message inconnu")
             }
         }
+    }
+
+    private fun rejected() {
+        running = false
+        cachedPdf = 0L
+        listener.onRejected()
     }
 
     private fun receivePdf(input: DataInputStream) {

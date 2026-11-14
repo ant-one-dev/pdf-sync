@@ -37,6 +37,11 @@ class ExpertActivity : Activity(), SyncServer.Listener {
     private lateinit var statusText: TextView
     private lateinit var pageText: TextView
 
+    // demandes d'accès (id, nom), affichées une par une
+    private val requests = ArrayDeque<Pair<Int, String>>()
+    private var requestDialog: AlertDialog? = null
+    private var shownRequest = -1
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -123,7 +128,49 @@ class ExpertActivity : Activity(), SyncServer.Listener {
 
     private fun updateStatus() {
         var text = "$connected tablette(s) connectée(s)"
+        val pending = requests.size + if (shownRequest >= 0) 1 else 0
+        if (pending > 0) text += "  •  $pending demande(s) en attente"
         statusText.text = text
+    }
+
+    private fun nextRequest() {
+        if (requestDialog?.isShowing == true || isFinishing) return
+        val (id, name) = requests.removeFirstOrNull() ?: run {
+            shownRequest = -1
+            updateStatus()
+            return
+        }
+        shownRequest = id
+        updateStatus()
+        requestDialog = AlertDialog.Builder(this)
+            .setTitle("Demande d'accès")
+            .setMessage("« $name » demande à rejoindre la présentation.\n\n" +
+                "Vérifiez qu'il s'agit bien d'un participant avant d'accepter.")
+            .setCancelable(false)
+            .setPositiveButton("Accepter") { _, _ -> server.approve(id); requestDone() }
+            .setNegativeButton("Refuser") { _, _ -> server.reject(id); requestDone() }
+            .show()
+    }
+
+    private fun requestDone() {
+        requestDialog = null
+        shownRequest = -1
+        nextRequest()
+    }
+
+    override fun onApprovalRequest(requestId: Int, name: String) = runOnUiThread {
+        requests.addLast(requestId to name)
+        nextRequest()
+        updateStatus()
+    }
+
+    override fun onApprovalCancelled(requestId: Int) = runOnUiThread {
+        requests.removeAll { it.first == requestId }
+        if (shownRequest == requestId) {
+            requestDialog?.dismiss()
+            requestDone()
+        }
+        updateStatus()
     }
 
     private fun showParticipants() {
@@ -135,7 +182,15 @@ class ExpertActivity : Activity(), SyncServer.Listener {
         val names = list.map { it.second }.toTypedArray()
         AlertDialog.Builder(this)
             .setTitle("Participants")
-            .setItems(names, null)
+            .setItems(names) { _, which ->
+                val (id, name) = list[which]
+                AlertDialog.Builder(this)
+                    .setTitle("Retirer « $name » ?")
+                    .setMessage("Le document sera effacé de sa tablette. Elle devra être acceptée à nouveau pour revenir.")
+                    .setPositiveButton("Retirer") { _, _ -> server.kick(id) }
+                    .setNegativeButton("Annuler", null)
+                    .show()
+            }
             .setNegativeButton("Fermer", null)
             .show()
     }
