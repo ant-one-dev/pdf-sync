@@ -58,6 +58,14 @@ class MainActivity : Activity() {
         content.addView(card)
         refreshNetwork()
 
+        val row = LinearLayout(this)
+        row.addView(button("Présenter (Expert)", filled = true) { whenReady { open(EXPERT) } }
+            .apply { textSize = 20f }, LinearLayout.LayoutParams(0, dp(80), 1f))
+        row.addView(button("Rejoindre (Client)", filled = true) { whenReady { openClient() } }
+            .apply { textSize = 20f }, LinearLayout.LayoutParams(0, dp(80), 1f).apply { marginStart = dp(16) })
+        content.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(28) })
+
         val scroll = ScrollView(this).apply {
             setBackgroundColor(Color.WHITE)
             addView(content)
@@ -131,6 +139,24 @@ class MainActivity : Activity() {
         dialog.show()
     }
 
+    private fun open(activity: Class<*>) = startActivity(Intent(this, activity))
+
+    private fun openClient() {
+        if (Build.VERSION.SDK_INT >= 29) {
+            open(CLIENT)
+            return
+        }
+        // Android 7 à 9 : pas de connexion automatique, on passe par les réglages Wi-Fi
+        AlertDialog.Builder(this)
+            .setTitle("Connexion au réseau de l'Expert")
+            .setMessage("Sur cette version d'Android, connectez-vous d'abord au réseau " +
+                "« ${NetworkSettings.ssid(this)} » dans les réglages Wi-Fi, puis revenez ici.")
+            .setPositiveButton("Réglages Wi-Fi") { _, _ -> startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }
+            .setNeutralButton("Je suis connecté") { _, _ -> open(CLIENT) }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
     // permissions, Wi-Fi allumé, localisation (Android 9 à 12) avant de lancer
     private fun whenReady(action: () -> Unit) {
         if (!configured()) {
@@ -179,5 +205,7 @@ class MainActivity : Activity() {
 
     companion object {
         private const val REQ_PERMS = 10
+        private val EXPERT = ExpertActivity::class.java
+        private val CLIENT = ClientActivity::class.java
     }
 }
