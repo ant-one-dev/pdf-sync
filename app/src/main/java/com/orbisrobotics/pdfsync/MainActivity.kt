@@ -16,6 +16,7 @@ import android.provider.Settings
 import android.text.InputType
 import android.view.Gravity
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -54,7 +55,7 @@ class MainActivity : Activity() {
         }
         networkText = label("", 16f, Palette.TEXT, bold = true)
         card.addView(networkText, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        card.addView(button("Réglages réseau") { editSettings(!configured()) })
+        card.addView(button("Réglages administrateur") { openAdmin() })
         content.addView(card)
         refreshNetwork()
 
@@ -75,13 +76,41 @@ class MainActivity : Activity() {
 
     private fun screenTitle() = "PDF Sync"
 
-    private fun configured() = NetworkSettings.isConfigured(this)
+    private fun configured() = NetworkSettings.isConfigured(this) && AdminLock.isSet(this)
 
     private fun refreshNetwork() {
         networkText.text = when {
             !configured() -> "Tablette non configurée : réglez d'abord le réseau."
-            else -> "Réseau : ${NetworkSettings.ssid(this)}"
+            else -> "Réseau : ${NetworkSettings.ssid(this)}  (mot de passe chiffré, verrouillé)"
         }
+    }
+
+    private fun openAdmin() {
+        if (!AdminLock.isSet(this)) {
+            editSettings(firstSetup = true)
+            return
+        }
+        val locked = AdminLock.lockedSeconds(this)
+        if (locked > 0) {
+            toast("Trop d'essais. Réessayez dans ${(locked + 59) / 60} min.")
+            return
+        }
+        val field = EditText(this).apply {
+            hint = "Code administrateur"
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Réglages administrateur")
+            .setView(FrameLayout(this).apply {
+                setPadding(dp(24), dp(8), dp(24), 0)
+                addView(field)
+            })
+            .setPositiveButton("Valider") { _, _ ->
+                if (AdminLock.check(this, field.text.toString())) editSettings(firstSetup = false)
+                else toast("Code administrateur incorrect")
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
     }
 
     // Première fois : tout est obligatoire. Ensuite un champ vide = inchangé.
@@ -100,7 +129,12 @@ class MainActivity : Activity() {
             hint = "Confirmer le mot de passe Wi-Fi"
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         }
-        val note = "Nom et mot de passe identiques sur toutes les tablettes."
+        val adminField = EditText(this).apply {
+            hint = if (firstSetup) "Code administrateur (6 chiffres min.)" else "Nouveau code administrateur (vide = inchangé)"
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        }
+        val note = "Nom et mot de passe identiques sur toutes les tablettes. " +
+            "Le mot de passe est chiffré et ne pourra plus être affiché."
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(24), dp(8), dp(24), 0)
@@ -108,6 +142,7 @@ class MainActivity : Activity() {
             addView(roomField)
             addView(passField)
             addView(confirmField)
+            addView(adminField)
         }
         val dialog = AlertDialog.Builder(this)
             .setTitle(if (firstSetup) "Configuration de la tablette" else "Modifier les réglages")
@@ -119,6 +154,7 @@ class MainActivity : Activity() {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val room = roomField.text.toString().trim()
                 val pass = passField.text.toString()
+                val admin = adminField.text.toString()
                 val newPass = firstSetup || pass.isNotEmpty()
                 when {
                     room.isEmpty() || room.length > 20 || !room.all { it.isLetterOrDigit() || it == '-' || it == '_' } ->
@@ -127,8 +163,10 @@ class MainActivity : Activity() {
                         passField.error = "Entre ${NetworkSettings.MIN_PASS} et 63 caractères"
                     newPass && pass != confirmField.text.toString() ->
                         confirmField.error = "Les mots de passe sont différents"
+                    (firstSetup || admin.isNotEmpty()) && admin.length < 6 -> adminField.error = "6 chiffres minimum"
                     else -> {
                         NetworkSettings.save(this, room, if (newPass) pass else NetworkSettings.passphrase(this))
+                        if (admin.isNotEmpty()) AdminLock.set(this, admin)
                         refreshNetwork()
                         dialog.dismiss()
                         toast("Réglages enregistrés")
