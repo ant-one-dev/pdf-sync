@@ -13,6 +13,7 @@ import android.provider.OpenableColumns
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -36,6 +37,7 @@ class ExpertActivity : Activity(), SyncServer.Listener {
     private lateinit var networkText: TextView
     private lateinit var statusText: TextView
     private lateinit var pageText: TextView
+    private lateinit var pointerButton: Button
 
     // demandes d'accès (id, nom), affichées une par une
     private val requests = ArrayDeque<Pair<Int, String>>()
@@ -53,6 +55,7 @@ class ExpertActivity : Activity(), SyncServer.Listener {
             pageText.text = "${i + 1} / $n"
         }
         pageView.onSwipe = { goTo(pages.current + it) }
+        pageView.onPointerMoved = { x, y -> server.sendPointer(x, y) }
 
         server = SyncServer(this)
         server.start()
@@ -112,6 +115,8 @@ class ExpertActivity : Activity(), SyncServer.Listener {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(12), dp(8), dp(12), dp(8))
         }
+        pointerButton = button("●  Pointeur") { togglePointer() }
+        bottom.addView(pointerButton, startMargin(dp(8)))
         bottom.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
         bottom.addView(button("◀  Précédente", filled = true) { goTo(pages.current - 1) })
         pageText = label("– / –", 18f, Palette.TEXT, bold = true).apply {
@@ -199,6 +204,16 @@ class ExpertActivity : Activity(), SyncServer.Listener {
     override fun onClientCountChanged(count: Int) = runOnUiThread {
         connected = count
         updateStatus()
+    }
+
+    private fun togglePointer() {
+        pageView.pointerMode = !pageView.pointerMode
+        pointerButton.text = if (pageView.pointerMode) "●  Pointeur actif" else "●  Pointeur"
+        pointerButton.setFilled(pageView.pointerMode)
+        if (!pageView.pointerMode) {
+            pageView.setPointer(-1f, -1f)
+            server.sendPointer(-1f, -1f)
+        }
     }
 
     private fun confirmEnd() {

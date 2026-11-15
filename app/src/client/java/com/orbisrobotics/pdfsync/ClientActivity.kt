@@ -129,6 +129,7 @@ class ClientActivity : Activity(), SyncClient.Listener {
 
     private fun clearDocument(message: String) {
         pages.clear()
+        pageView.setPointer(-1f, -1f)
         currentFile = null
         pageText.text = ""
         progress.visibility = View.GONE
@@ -238,6 +239,7 @@ class ClientActivity : Activity(), SyncClient.Listener {
 
     override fun onPage(page: Int) = runOnUiThread { pages.show(page) }
 
+    override fun onPointer(x: Float, y: Float) = runOnUiThread { pageView.setPointer(x, y) }
 
     override fun onRejected() = runOnUiThread {
         handler.removeCallbacks(lostTimeout)

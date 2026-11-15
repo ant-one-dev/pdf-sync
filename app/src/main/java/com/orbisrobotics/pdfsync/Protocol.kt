@@ -16,6 +16,7 @@ import java.io.File
  * Ensuite Expert -> Client :
  *   PDF   long id, UTF nom, long taille, octets
  *   PAGE  int page
+ *   LASER float x, float y      (0..1 dans la page, x < 0 = caché)
  *   PING                        toutes les 3 s
  *   END                         fin de séance, le Client efface le document
  *   REJECTED                    tablette retirée par le présentateur
@@ -31,6 +32,7 @@ object Protocol {
     const val PAGE = 2
     const val PING = 3
     const val END = 4
+    const val LASER = 5
 
     const val PING_MS = 3_000L
     const val READ_TIMEOUT_MS = 10_000

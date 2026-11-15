@@ -34,6 +34,13 @@ class PageView(context: Context) : View(context) {
     private var scaling = false
     private val settle = Runnable { requestDetail() }
 
+    // Pointeur : sur l'Expert le doigt déplace le point au lieu de zoomer.
+    var pointerMode = false
+    var onPointerMoved: ((x: Float, y: Float) -> Unit)? = null
+    private var pointerX = -1f
+    private var pointerY = -1f
+    private val pointerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFF1A1A.toInt() }
+    private val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x55FF1A1A }
 
     private val scaleDetector = ScaleGestureDetector(context,
         object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
@@ -90,6 +97,7 @@ class PageView(context: Context) : View(context) {
         page = null
         detail = null
         token++
+        pointerX = -1f
         invalidate()
     }
 
@@ -109,6 +117,12 @@ class PageView(context: Context) : View(context) {
         changed()
     }
 
+    /** Position en coordonnées de page (0..1), x < 0 pour cacher. */
+    fun setPointer(x: Float, y: Float) {
+        pointerX = x
+        pointerY = y
+        invalidate()
+    }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -192,11 +206,44 @@ class PageView(context: Context) : View(context) {
             matrix.mapRect(dst)
             canvas.drawBitmap(d, null, dst, paint)
         }
+        if (pointerX >= 0f && pointerY >= 0f) {
+            val pt = floatArrayOf(pointerX * b.width, pointerY * b.height)
+            matrix.mapPoints(pt)
+            val r = 9 * resources.displayMetrics.density
+            canvas.drawCircle(pt[0], pt[1], r * 2.2f, haloPaint)
+            canvas.drawCircle(pt[0], pt[1], r, pointerPaint)
+        }
     }
 
+    private fun toPage(x: Float, y: Float): FloatArray? {
+        val b = page ?: return null
+        val inv = Matrix()
+        if (!matrix.invert(inv)) return null
+        val pt = floatArrayOf(x, y)
+        inv.mapPoints(pt)
+        return floatArrayOf((pt[0] / b.width).coerceIn(0f, 1f), (pt[1] / b.height).coerceIn(0f, 1f))
+    }
+
+    private fun pointerTouch(e: MotionEvent) {
+        when (e.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                val p = toPage(e.x, e.y) ?: return
+                setPointer(p[0], p[1])
+                onPointerMoved?.invoke(p[0], p[1])
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                setPointer(-1f, -1f)
+                onPointerMoved?.invoke(-1f, -1f)
+            }
+        }
+    }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (pointerMode) {
+            pointerTouch(event)
+            return true
+        }
         if (event.actionMasked == MotionEvent.ACTION_DOWN) scaling = false
         scaleDetector.onTouchEvent(event)
         gestures.onTouchEvent(event)

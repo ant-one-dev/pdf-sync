@@ -44,6 +44,7 @@ class SyncServer(private val listener: Listener) {
     private val approved = ConcurrentHashMap.newKeySet<String>()
     private val ids = AtomicInteger()
     private var pinger: ScheduledExecutorService? = null
+    private var lastLaser = 0L
 
     fun start() {
         running = true
@@ -128,6 +129,17 @@ class SyncServer(private val listener: Listener) {
     fun setPage(page: Int) {
         this.page = page
         for (c in clients) c.send { o -> writePage(o, page) }
+    }
+
+    fun sendPointer(x: Float, y: Float) {
+        val now = System.currentTimeMillis()
+        if (x >= 0f && now - lastLaser < 25) return // 40 positions/s, largement suffisant
+        lastLaser = now
+        for (c in clients) c.send { o ->
+            o.writeByte(Protocol.LASER)
+            o.writeFloat(x)
+            o.writeFloat(y)
+        }
     }
 
     private fun writePdf(o: DataOutputStream, p: Pdf) {

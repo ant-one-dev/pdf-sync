@@ -26,6 +26,7 @@ class SyncClient(
         fun onPdfProgress(received: Long, total: Long)
         fun onPdfReceived(file: File, name: String)
         fun onPage(page: Int)
+        fun onPointer(x: Float, y: Float)
         fun onRejected()
         fun onSessionEnded()
     }
@@ -109,6 +110,7 @@ class SyncClient(
             when (input.readByte().toInt()) {
                 Protocol.PDF -> receivePdf(input)
                 Protocol.PAGE -> listener.onPage(input.readInt())
+                Protocol.LASER -> listener.onPointer(input.readFloat(), input.readFloat())
                 Protocol.PING -> Unit
                 Protocol.REJECTED -> {
                     rejected()
