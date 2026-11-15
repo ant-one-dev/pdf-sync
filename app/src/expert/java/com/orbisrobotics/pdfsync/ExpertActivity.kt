@@ -42,6 +42,8 @@ class ExpertActivity : Activity(), SyncServer.Listener {
     private lateinit var statusText: TextView
     private lateinit var pageText: TextView
     private lateinit var pointerButton: Button
+    private lateinit var fullscreenButton: Button
+    private var fullscreen = false
     private lateinit var thumbsScroll: HorizontalScrollView
     private lateinit var thumbsRow: LinearLayout
     private var thumbsDoc: PdfDocument? = null
@@ -149,6 +151,8 @@ class ExpertActivity : Activity(), SyncServer.Listener {
         bottom.addView(pageText)
         bottom.addView(button("Suivante  ▶", filled = true) { goTo(pages.current + 1) })
         bottom.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
+        fullscreenButton = button("Plein écran") { setFullscreen(!fullscreen) }
+        bottom.addView(fullscreenButton)
         bottom.addView(button("Terminer") { confirmEnd() }, startMargin(dp(8)))
         root.addView(bottom)
 
@@ -161,6 +165,22 @@ class ExpertActivity : Activity(), SyncServer.Listener {
         val pending = requests.size + if (shownRequest >= 0) 1 else 0
         if (pending > 0) text += "  •  $pending demande(s) en attente"
         statusText.text = text
+    }
+
+    // plein écran : on cache le bandeau du haut et les barres Android, la navigation reste
+    private fun setFullscreen(on: Boolean) {
+        fullscreen = on
+        header.visibility = if (on) View.GONE else View.VISIBLE
+        headerLine.visibility = header.visibility
+        fullscreenButton.text = if (on) "Quitter plein écran" else "Plein écran"
+        fullscreenButton.setFilled(on)
+        hideSystemBars(on)
+        pageView.post { pageView.resetZoom() }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && fullscreen) hideSystemBars(true) // les dialogues font réapparaître les barres
     }
 
     private fun nextRequest() {

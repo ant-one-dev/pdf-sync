@@ -11,6 +11,7 @@ import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -100,5 +101,23 @@ fun Activity.applySafeArea(root: View) {
         root.requestApplyInsets()
     } else {
         root.fitsSystemWindows = true
+    }
+}
+
+@Suppress("DEPRECATION")
+fun Activity.hideSystemBars(hide: Boolean) {
+    if (Build.VERSION.SDK_INT >= 30) {
+        val c = window.insetsController ?: return
+        if (hide) {
+            c.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            c.hide(WindowInsets.Type.systemBars())
+        } else {
+            c.show(WindowInsets.Type.systemBars())
+        }
+    } else {
+        window.decorView.systemUiVisibility = if (hide) {
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+        } else View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
     }
 }

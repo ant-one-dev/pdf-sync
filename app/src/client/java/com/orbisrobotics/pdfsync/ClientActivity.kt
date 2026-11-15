@@ -14,6 +14,7 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -35,6 +36,10 @@ class ClientActivity : Activity(), SyncClient.Listener {
     private lateinit var messageText: TextView
     private lateinit var progress: ProgressBar
     private lateinit var dir: File
+    private lateinit var bar: View
+    private lateinit var barLine: View
+    private lateinit var exitFullscreen: Button
+    private var fullscreen = false
     private var client: SyncClient? = null
     private var join: WifiDirectJoin? = null
     private var wifiLock: WifiManager.WifiLock? = null
@@ -60,6 +65,7 @@ class ClientActivity : Activity(), SyncClient.Listener {
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
 
         buildUi()
+        if (prefs.getBoolean("fullscreen", false)) setFullscreen(true)
         pages = PageController(this, pageView)
         pages.onPageShown = { i, n -> pageText.text = "Page ${i + 1} / $n" }
 
@@ -149,6 +155,7 @@ class ClientActivity : Activity(), SyncClient.Listener {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(8), dp(12), dp(8))
         }
+        bar = top
         top.addView(logo(32))
         statusText = label("", 13f, Palette.MUTED).apply {
             maxLines = 1
@@ -158,9 +165,11 @@ class ClientActivity : Activity(), SyncClient.Listener {
         pageText = label("", 16f, Palette.ACCENT_DARK, bold = true).apply { setPadding(dp(8), 0, dp(12), 0) }
         top.addView(pageText)
         top.addView(button("Vue entière") { pageView.resetZoom() }, startMargin(dp(8)))
+        top.addView(button("Plein écran", filled = true) { setFullscreen(true) }, startMargin(dp(8)))
         top.addView(button("Quitter") { finish() }, startMargin(dp(8)))
         root.addView(top)
         val line = View(this).apply { setBackgroundColor(Palette.ACCENT) }
+        barLine = line
         root.addView(line, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(3)))
 
         val area = FrameLayout(this)
@@ -178,10 +187,33 @@ class ClientActivity : Activity(), SyncClient.Listener {
             progressTintList = ColorStateList.valueOf(Palette.ACCENT)
         }
         area.addView(progress, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(8), Gravity.BOTTOM))
+        exitFullscreen = button("Quitter le plein écran") { setFullscreen(false) }.apply {
+            alpha = 0.85f
+            visibility = View.GONE
+        }
+        area.addView(exitFullscreen, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END
+        ).apply { setMargins(dp(12), dp(12), dp(12), dp(12)) })
         root.addView(area, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
 
         setContentView(root)
         applySafeArea(root)
+    }
+
+    // seul le document reste à l'écran ; le choix est mémorisé
+    private fun setFullscreen(on: Boolean) {
+        fullscreen = on
+        prefs.edit().putBoolean("fullscreen", on).apply()
+        bar.visibility = if (on) View.GONE else View.VISIBLE
+        barLine.visibility = bar.visibility
+        exitFullscreen.visibility = if (on) View.VISIBLE else View.GONE
+        hideSystemBars(on)
+        pageView.post { pageView.resetZoom() }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && fullscreen) hideSystemBars(true)
     }
 
     private fun refreshStatus() {
