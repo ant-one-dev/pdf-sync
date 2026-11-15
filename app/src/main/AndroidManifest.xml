@@ -24,7 +24,7 @@
     <application
         android:allowBackup="false"
         android:icon="@android:drawable/ic_menu_slideshow"
-        android:label="PDF Sync"
+        android:label="${appName}"
         android:largeHeap="true"
         android:theme="@style/Theme.PdfSync">
 
@@ -36,14 +36,5 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".ExpertActivity"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|navigation"
-            android:exported="false" />
-        <activity
-            android:name=".ClientActivity"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|navigation"
-            android:exported="false" />
     </application>
 </manifest>

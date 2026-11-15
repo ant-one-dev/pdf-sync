@@ -60,13 +60,20 @@ class MainActivity : Activity() {
         content.addView(card)
         refreshNetwork()
 
-        val row = LinearLayout(this)
-        row.addView(button("Présenter (Expert)", filled = true) { whenReady { open(EXPERT) } }
-            .apply { textSize = 20f }, LinearLayout.LayoutParams(0, dp(80), 1f))
-        row.addView(button("Rejoindre (Client)", filled = true) { whenReady { openClient() } }
-            .apply { textSize = 20f }, LinearLayout.LayoutParams(0, dp(80), 1f).apply { marginStart = dp(16) })
-        content.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(28) })
+        // une seule action : la variante (Expert ou Client) est fixée à la compilation
+        val startLabel = if (BuildConfig.IS_EXPERT) "Démarrer la présentation" else "Rejoindre la présentation"
+        content.addView(button(startLabel, filled = true) {
+            whenReady { if (BuildConfig.IS_EXPERT) open(EXPERT) else openClient() }
+        }.apply { textSize = 20f }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(80)).apply {
+            topMargin = dp(28)
+        })
+        content.addView(label(if (BuildConfig.IS_EXPERT)
+            "Chaque tablette qui demande à rejoindre apparaît avec le nom du participant : acceptez-la ou " +
+                "refusez-la. Le document est effacé des tablettes à la fin de la présentation."
+        else "Indiquez votre nom puis attendez que le présentateur valide votre tablette. " +
+            "Le document est effacé de cette tablette à la fin de la présentation.", 14f, Palette.MUTED).apply {
+            setPadding(0, dp(20), 0, 0)
+        })
 
         val scroll = ScrollView(this).apply {
             setBackgroundColor(Color.WHITE)
@@ -75,7 +82,8 @@ class MainActivity : Activity() {
         setContentView(scroll)
     }
 
-    private fun screenTitle() = "PDF Sync"
+    private fun screenTitle() =
+        if (BuildConfig.IS_EXPERT) "Présentation – tablette du présentateur" else "Présentation – tablette participant"
 
     private fun configured() = NetworkSettings.isConfigured(this) && AdminLock.isSet(this)
 
@@ -178,7 +186,8 @@ class MainActivity : Activity() {
         dialog.show()
     }
 
-    private fun open(activity: Class<*>) = startActivity(Intent(this, activity))
+    // la classe n'existe que dans la variante qui l'utilise, d'où le nom en dur
+    private fun open(activity: String) = startActivity(Intent().setClassName(this, activity))
 
     private fun openClient() {
         if (Build.VERSION.SDK_INT >= 29) {
@@ -244,7 +253,7 @@ class MainActivity : Activity() {
 
     companion object {
         private const val REQ_PERMS = 10
-        private val EXPERT = ExpertActivity::class.java
-        private val CLIENT = ClientActivity::class.java
+        private const val EXPERT = "com.orbisrobotics.pdfsync.ExpertActivity"
+        private const val CLIENT = "com.orbisrobotics.pdfsync.ClientActivity"
     }
 }

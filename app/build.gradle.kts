@@ -24,6 +24,27 @@ android {
         versionName = "1.0"
     }
 
+    // Deux applis séparées : Expert (présentateur) et Client (participants)
+    flavorDimensions += "role"
+    productFlavors {
+        create("expert") {
+            dimension = "role"
+            applicationIdSuffix = ".expert"
+            minSdk = 29 // création d'un groupe Wi-Fi Direct nommé : Android 10+
+            manifestPlaceholders["appName"] = "Expert"
+            buildConfigField("boolean", "IS_EXPERT", "true")
+        }
+        create("client") {
+            dimension = "role"
+            applicationIdSuffix = ".client"
+            manifestPlaceholders["appName"] = "Client"
+            buildConfigField("boolean", "IS_EXPERT", "false")
+        }
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
 
     signingConfigs {
         if (!keystoreProps.isEmpty) {
