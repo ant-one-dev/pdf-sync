@@ -96,7 +96,8 @@ class ExpertActivity : Activity(), SyncServer.Listener {
             setPadding(dp(16), dp(10), dp(12), dp(10))
         }
         header = top
-        top.addView(button("Ouvrir un PDF", filled = true) { pickPdf() })
+        top.addView(logo(36))
+        top.addView(button("Ouvrir un PDF", filled = true) { pickPdf() }, startMargin(dp(20)))
         val info = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), 0, dp(8), 0)

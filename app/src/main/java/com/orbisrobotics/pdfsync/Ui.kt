@@ -6,14 +6,17 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
+import android.view.Gravity
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 
 object Palette {
-    const val ACCENT = 0xFF3F51B5.toInt()
-    const val ACCENT_DARK = 0xFF303F9F.toInt()
-    const val ACCENT_LIGHT = 0xFFE8EAF6.toInt()
+    // Orbis Robotics : bleu électrique / blanc
+    const val ACCENT = 0xFF1A56FF.toInt()
+    const val ACCENT_DARK = 0xFF0B3AC4.toInt()
+    const val ACCENT_LIGHT = 0xFFEAF0FF.toInt()
     const val TEXT = 0xFF0F172A.toInt()
     const val MUTED = 0xFF64748B.toInt()
     const val DIVIDER = 0xFFE2E8F0.toInt()
@@ -61,3 +64,19 @@ fun Context.label(text: String, size: Float, color: Int, bold: Boolean = false) 
 fun startMargin(px: Int) = LinearLayout.LayoutParams(
     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
 ).apply { marginStart = px }
+
+/** Logo : pictogramme + « ORBIS ROBOTICS ». */
+fun Context.logo(size: Int) = LinearLayout(this).apply {
+    orientation = LinearLayout.HORIZONTAL
+    gravity = Gravity.CENTER_VERTICAL
+    addView(ImageView(context).apply { setImageResource(R.drawable.ic_orbis) },
+        LinearLayout.LayoutParams(dp(size), dp(size)))
+    addView(label("ORBIS", size * 0.42f, Palette.TEXT, bold = true).apply {
+        letterSpacing = 0.12f
+        setPadding(dp(10), 0, 0, 0)
+    })
+    addView(label("ROBOTICS", size * 0.42f, Palette.ACCENT).apply {
+        letterSpacing = 0.12f
+        setPadding(dp(6), 0, 0, 0)
+    })
+}

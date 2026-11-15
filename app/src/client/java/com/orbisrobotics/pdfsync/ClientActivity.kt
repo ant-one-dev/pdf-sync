@@ -149,6 +149,7 @@ class ClientActivity : Activity(), SyncClient.Listener {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(8), dp(12), dp(8))
         }
+        top.addView(logo(32))
         statusText = label("", 13f, Palette.MUTED).apply {
             maxLines = 1
             setPadding(dp(16), 0, dp(8), 0)

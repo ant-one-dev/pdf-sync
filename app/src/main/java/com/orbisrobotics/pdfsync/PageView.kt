@@ -83,7 +83,7 @@ class PageView(context: Context) : View(context) {
     })
 
     init {
-        setBackgroundColor(0xFFEEF1F5.toInt())
+        setBackgroundColor(Palette.PAGE_BG)
     }
 
     fun setPage(bmp: Bitmap) {

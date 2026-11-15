@@ -15,6 +15,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.text.InputType
 import android.view.Gravity
+import android.view.View
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -39,6 +40,9 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(40), dp(32), dp(40), dp(32))
         }
+        content.addView(logo(56))
+        content.addView(View(this).apply { setBackgroundColor(Palette.ACCENT) },
+            LinearLayout.LayoutParams(dp(72), dp(4)).apply { topMargin = dp(20) })
         content.addView(label(screenTitle(), 28f, Palette.TEXT, bold = true).apply { setPadding(0, dp(16), 0, 0) })
         content.addView(label("L'Expert crée un réseau Wi-Fi Direct privé et chiffré. Activez le Wi-Fi " +
             "sur toutes les tablettes, sans vous connecter à aucun réseau.", 15f, Palette.MUTED).apply {
