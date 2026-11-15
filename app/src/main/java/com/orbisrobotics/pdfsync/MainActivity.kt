@@ -84,6 +84,7 @@ class MainActivity : Activity() {
             addView(content)
         }
         setContentView(scroll)
+        applySafeArea(scroll)
     }
 
     private fun screenTitle() =

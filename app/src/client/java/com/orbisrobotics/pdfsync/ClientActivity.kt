@@ -181,6 +181,7 @@ class ClientActivity : Activity(), SyncClient.Listener {
         root.addView(area, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
 
         setContentView(root)
+        applySafeArea(root)
     }
 
     private fun refreshStatus() {

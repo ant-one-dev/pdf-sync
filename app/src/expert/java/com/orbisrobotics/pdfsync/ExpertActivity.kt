@@ -153,6 +153,7 @@ class ExpertActivity : Activity(), SyncServer.Listener {
         root.addView(bottom)
 
         setContentView(root)
+        applySafeArea(root)
     }
 
     private fun updateStatus() {

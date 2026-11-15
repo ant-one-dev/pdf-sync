@@ -1,12 +1,16 @@
 package com.orbisrobotics.pdfsync
 
+import android.app.Activity
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
+import android.os.Build
 import android.view.Gravity
+import android.view.View
+import android.view.WindowInsets
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -79,4 +83,22 @@ fun Context.logo(size: Int) = LinearLayout(this).apply {
         letterSpacing = 0.12f
         setPadding(dp(6), 0, 0, 0)
     })
+}
+
+/**
+ * Android 15 (targetSdk 35) force le mode edge-to-edge : sans ça le haut de l'appli
+ * passe sous la barre d'état. On ajoute les insets en padding sur la vue racine.
+ */
+fun Activity.applySafeArea(root: View) {
+    if (Build.VERSION.SDK_INT >= 30) {
+        window.setDecorFitsSystemWindows(false)
+        root.setOnApplyWindowInsetsListener { v, insets ->
+            val i = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+            v.setPadding(i.left, i.top, i.right, i.bottom)
+            WindowInsets.CONSUMED
+        }
+        root.requestApplyInsets()
+    } else {
+        root.fitsSystemWindows = true
+    }
 }
