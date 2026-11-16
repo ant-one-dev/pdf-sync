@@ -18,7 +18,7 @@ Un présentateur projette un PDF sur sa tablette, et les tablettes des participa
 même page en temps réel. Tout passe par un réseau **Wi-Fi Direct** privé créé par la tablette du
 présentateur. Pas de routeur, pas d'internet, pas de cloud.
 
-![Expert et Client synchronisés](docs/screenshots/expert-vignettes.jpg)
+![Démo : page et pointeur synchronisés entre l’Expert et un Client](docs/demo.gif)
 
 ## Contexte : le cahier des charges
 
